@@ -1,0 +1,66 @@
+# Version-control and editor metadata.
+.git
+.gitignore
+.idea
+.vscode
+
+# Documentation is kept outside the image.
+**/[Rr][Ee][Aa][Dd][Mm][Ee].[Mm][Dd]
+
+# Python and test caches.
+**/__pycache__/
+**/*.py[cod]
+**/*.pyo
+**/*.pyd
+**/*.egg-info/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+test_results/
+# The figure notebook and its raw results are host-side artifact material;
+# Dockerfile does not copy them into the runtime image.
+result_folder_all/
+
+# Build trees and generated firmware artifacts.
+**/build/
+**/build_dfa_*/
+**/build_sdfa_*/
+**/build_gist_*/
+**/bin_dir_*/
+**/sdkconfig.old
+**/*.bin
+**/*.elf
+**/*.hex
+**/*.uf2
+**/*.map
+**/*.o
+**/*.obj
+**/*.a
+**/*.so
+**/*.dylib
+**/*.dll
+
+# The AIfES implementation source is compiled as part of each firmware project.
+
+# Large local data and experiment outputs.
+workspace_simulation/data/
+workspace_simulation/dataset/
+workspace_simulation/log/
+workspace_simulation/*.pt
+workspace_simulation/*.pth
+workspace_simulation/*.ckpt
+workspace_simulation/*.onnx
+**/*.zip
+**/*.tar
+**/*.tar.gz
+**/*.rar
+
+# The checked-in emulation binary bank is validated in an intermediate Docker
+# stage; its checksum manifest is removed before the final image is produced.
+!binary_bank/
+!binary_bank/emulation/
+!binary_bank/emulation/**/
+!binary_bank/emulation/**/*.bin
+!binary_bank/emulation/idf52_flash_images.sha256
+binary_bank/emulation/**/*.log
+binary_bank/emulation/**/[Rr][Ee][Aa][Dd][Mm][Ee].[Mm][Dd]

@@ -1,0 +1,26 @@
+# Direct project dependencies.
+# Dockerfile installs torch/torchvision from its selected index before the remaining dependencies.
+torch==2.5.1
+torchvision==0.20.1
+
+torchmetrics==1.8.2
+numpy==1.26.4
+pandas==2.3.3
+XlsxWriter==3.2.9
+matplotlib==3.10.8
+networkx==3.4.2
+PyYAML==6.0.3
+Pillow==10.4.0
+tqdm==4.67.1
+bitmap==0.0.7
+
+# Dataset and preprocessing utilities used by data_getter modules.
+fiftyone==1.4.1
+fiftyone-db==1.4.1
+datasets==4.0.0
+librosa==0.11.0
+soundfile==0.13.1
+scipy==1.15.2
+
+# Required by torchmetrics MeanAveragePrecision for object detection metrics.
+pycocotools==2.0.11

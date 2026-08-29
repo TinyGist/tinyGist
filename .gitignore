@@ -1,0 +1,70 @@
+# Local Python environments and caches.
+.venv/
+venv/
+env/
+**/__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Notebook and editor state.
+**/.ipynb_checkpoints/
+.idea/
+.vscode/
+*~
+*.swp
+
+# Local validation evidence and generated figure inputs/outputs. Keep the
+# empty directory markers that document the expected result layout.
+test_results/
+result_folder_all/results/**
+!result_folder_all/results/**/
+!result_folder_all/results/**/.gitkeep
+
+# ESP-IDF and firmware build products.
+**/build/
+**/build_*/
+**/bin_dir_*/
+**/sdkconfig.old
+*.elf
+*.hex
+*.uf2
+*.map
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.bin
+!binary_bank/emulation/**/flash*.bin
+
+# Compiled archives are not tracked; AIfES is included as source.
+*.a
+
+# Preserve only the build-time checksum manifest shipped with the emulation
+# examples. The Dockerfile validates it and removes it from the final image.
+*.sha256
+!binary_bank/emulation/idf52_flash_images.sha256
+
+# Runtime simulation downloads and outputs. The four Muscle-Gesture CSV files
+# are source inputs for the documented dataset-generation workflow.
+workspace_simulation/data/*
+!workspace_simulation/data/muscle-gesture/
+!workspace_simulation/data/muscle-gesture/*.csv
+workspace_simulation/Data/
+workspace_simulation/dataset/
+workspace_simulation/log/
+workspace_simulation/*.pt
+workspace_simulation/*.pth
+workspace_simulation/*.ckpt
+workspace_simulation/*.onnx
+
+# Downloaded archives.
+*.zip
+*.tar
+*.tar.gz
+*.rar

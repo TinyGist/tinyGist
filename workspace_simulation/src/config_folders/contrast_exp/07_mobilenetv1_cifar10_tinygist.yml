@@ -1,0 +1,62 @@
+schema_version: 2
+
+experiment:
+  task: classification
+  seed: 42
+
+federation:
+  rounds: 200
+  clients:
+    count: 10
+
+dataset:
+  name: cifar10
+  partition:
+    samples_per_client: 1000
+    labels_per_client: 5
+    label_assignment:
+      strategy: loop
+      loop_step: 3
+    sample_assignment:
+      strategy: dirichlet
+      dirichlet_alpha: 100
+  evaluation:
+    test_samples: 3010
+    validation_samples: 1010
+  batches:
+    train_size: 50
+    test_size: 100
+    validation_size: 100
+
+model:
+  name: MobileNetV1Small
+  input_size: 3
+  num_classes: 10
+
+training:
+  optimizer:
+    name: adam_cross_round
+    learning_rate: 0.01
+    weight_decay: 0
+  local:
+    epochs_per_round: 3
+    max_batches_per_epoch: 3
+  loss: cross_entropy
+  learning_rate_adaptation:
+    strategies: [staircase]
+
+method:
+  name: Gist
+  segments:
+    count: 3
+  exchange:
+    sends_per_client: 6
+    receive_queue:
+      aggregation_threshold: 5
+      capacity: 50
+  segment_importance:
+    metric: parameter_magnitude.current
+  aggregation:
+    weight:
+      metric: validation_accuracy
+      refresh_batch_norm_from_validation: true

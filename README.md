@@ -15,7 +15,7 @@ All times in this document are approximate author estimates. They vary with the 
 ## 2. Build the image
 
 ```bash
-git clone <artifact-repository-url> tinyGist
+git clone https://github.com/TinyGist/tinyGist.git
 cd tinyGist
 docker build -t tinygist-artifact-mobicom26:latest -f Dockerfile .
 ```

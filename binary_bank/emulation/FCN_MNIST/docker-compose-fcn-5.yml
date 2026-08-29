@@ -1,0 +1,35 @@
+x-common: &common
+  image: tinygist-artifact-mobicom26:latest
+  network_mode: "none"
+  cap_add:
+    - NET_ADMIN
+  devices:
+    - /dev/net/tun:/dev/net/tun
+  working_dir: /work
+  init: true
+  stop_signal: SIGINT
+  stop_grace_period: 20s
+  stdin_open: true
+  tty: true
+
+services:
+  fcn-5-dfa:
+    <<: *common
+    container_name: fcn-5-dfa
+    volumes:
+      - ./5/DFA:/work
+    command: ["bash", "/work/emulate.sh", "5"]
+
+  fcn-5-gist:
+    <<: *common
+    container_name: fcn-5-gist
+    volumes:
+      - ./5/Gist_Ada:/work
+    command: ["bash", "/work/emulate.sh", "5"]
+    
+  fcn-5-sdfa:
+    <<: *common
+    container_name: fcn-5-sdfa
+    volumes:
+      - ./5/SDFA:/work
+    command: ["bash", "/work/emulate.sh", "5"]

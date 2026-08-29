@@ -1,0 +1,2 @@
+# Figure 16 High tier: ESP32-S3 at 240 MHz.
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y

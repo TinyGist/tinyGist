@@ -1,0 +1,421 @@
+# Strict schema-v2 configuration; archived key/value aliases are rejected.
+# Runtime placement is runner-owned, not part of experiment semantics:
+# framework_runner defaults to --aggregation-device auto; the parallel runner
+# defaults to --aggregation-device cpu to reduce contention between experiments.
+schema_version: 2
+
+experiment:
+  # Supported: classification, object_detection.
+  task: classification
+  # One run keeps this exact CPU model-initialization seed. It does not seed
+  # CUDA, data partitioning, augmentation, or runtime sampling. With repeats
+  # > 1, zero-based seed index i uses seed + i, so the base seed is included.
+  repeat_count: 1
+  seed: 42
+  # Runner-owned metadata written into generated per-repeat snapshots. Do not
+  # set these manually in an experiment config:
+  # repeat_index: 0
+  # base_seed: 42
+
+federation:
+  rounds: 200
+  clients:
+    count: 10
+    # Client participation simulation. This is a core federation setting rather
+    # than an optional scoring feature.
+    availability:
+      strategy: probabilistic
+      distribution: gaussian
+      gaussian_mean: 0.8
+      gaussian_std: 0.1
+      chi_square_k: 2
+      uniform_multiplier: 2
+      # Closed [0, 1] bounds; 0 is valid and can make a client unavailable.
+      minimum: 1.0
+      maximum: 1.0
+  network:
+    # Common topologies: mesh_full, ring, star, line, tree_random,
+    # tree_binary, custom_clustered.
+    topology: mesh_full
+    reshuffle_each_round: false
+    reliability:
+      mean: 0.8
+      std: 0.1
+      # Closed [0, 1] bounds; 0 is a valid always-dropped link reliability.
+      minimum: 1.0
+      maximum: 1.0
+
+dataset:
+  # Examples: mnist, fmnist, emnist, cifar10, cifar100, muscle_gesture,
+  # google_speech, google_speech_kws, vww, svhn, fomo_person,
+  # fomo_vehicle, fomo_vehicle_binary, yolo_person, yolo_vehicle.
+  name: cifar10
+  partition:
+    # Shared validation rejects impossible class coverage and labels_per_client
+    # greater than the downloaded dataset's class count.
+    # Dirichlet/uniform integer quotas always sum to this exact client total.
+    samples_per_client: 610
+    labels_per_client: 5
+    label_assignment:
+      strategy: loop
+      # Used only by the loop strategy.
+      loop_step: 3
+    sample_assignment:
+      strategy: dirichlet
+      # Used only by the Dirichlet strategy.
+      dirichlet_alpha: 100
+  evaluation:
+    # These totals are exact when every class has enough source samples;
+    # non-divisible remainders are distributed deterministically across classes.
+    test_samples: 2010
+    validation_samples: 2010
+  batches:
+    train_size: 50
+    test_size: 100
+    validation_size: 100
+
+model:
+  # Examples without normalization: FCN, DeepFC, BasicConv, LeNet5,
+  # ConvolutionalNet, and MobileNetV1SmallNoBN.
+  # BatchNorm model names: MobileNetV1Small, MobileNetV2Small,
+  # MobileNetV2Baseline, MobileNetV2Alpha035, MobileNetV4Small,
+  # FOMOMNv2Baseline, FOMOMNv2Alpha035, and uYOLO.
+  # Append GroupNorm or LayerNorm to any BatchNorm model name to select the
+  # matching stateless variant, for example MobileNetV4SmallGroupNorm or
+  # uYOLOLayerNorm. GroupNorm uses 8 groups; LayerNorm normalizes channels.
+  name: MobileNetV1Small
+  # CNNs use input channels; fully connected models use flattened input size.
+  input_size: 3
+  num_classes: 10
+
+training:
+  optimizer:
+    # Supported: adam_cross_round, adam_round, sgd.
+    # adam_cross_round keeps Adam moment estimates across global rounds.
+    # adam_round clears Adam moment estimates before each active client's local training.
+    name: adam_cross_round
+    learning_rate: 0.01
+    weight_decay: 0.0005
+  local:
+    epochs_per_round: 3
+    # With local_dp_sgd, each epoch executes exactly this many independently
+    # sampled Poisson batches, for epochs_per_round * max_batches_per_epoch steps.
+    max_batches_per_epoch: 3
+    # Optional feature: remove this mapping or set early_stop: null to disable.
+    early_stop:
+      min_epochs: 1
+      # Optional absolute stopping condition.
+      ceiling:
+        # Supported: accuracy, loss.
+        metric: accuracy
+        threshold: 0.98
+      # Optional no-improvement condition.
+      plateau:
+        metric: accuracy
+        patience: 3
+        min_delta: 0.001
+        near_best_ratio: 0.995
+      record:
+        # round resets the best value each round; client carries it across rounds.
+        scope: round
+        decay: 1.0
+  # cross_entropy maps to the registered ce_loss implementation.
+  loss: cross_entropy
+  # Optional feature without an enabled flag. [] disables adaptation.
+  # Supported entries: loss, staircase.
+  learning_rate_adaptation:
+    strategies: []
+
+method:
+  # Supported: Centralized, SegmentPulling, DFA, SDFA, Gist.
+  name: Gist
+
+  # Optional activation schedule. Omitting this block or any field uses round 1.
+  # A positive whole number is an absolute 1-based round. A decimal strictly between
+  # 0 and 1 is ceil(training.rounds * value); 1.0 means absolute round 1.
+  # These fields delay an already configured feature; they do not enable a disabled one.
+  activation_schedule:
+    # Before this round, importance-based construction/selection falls back to
+    # random-per-device construction and uniform selection while score buffers warm up.
+    segment_importance_start_round: 1
+    # Before this round, aggregation uses uniform weights and skips validation/Fisher
+    # aggregation-weight preparation and transmission.
+    aggregation_weight_start_round: 1
+    # Before this round, local-update unit-L2 snapshots and projection are skipped.
+    local_update_l2_start_round: 1
+
+  parameters:
+    # Supported: all, conv, fc, custom.
+    # The scope is passed to the canonical model vector/block interface.
+    scope: all
+    batch_norm:
+      # Supported: none, affine, affine_and_running_stats.
+      include: affine_and_running_stats
+      # as_base_unit: BN follows ordinary segmentation.
+      # with_each_segment: full BN is appended to every selected segment.
+      # once_per_recipient: full BN is sent once per sender/recipient pair.
+      distribution: once_per_recipient
+      # same_as_model or uniform. Separate BN distribution always becomes uniform.
+      aggregation_weight: uniform
+
+  partition:
+    # Primitive unit: parameter, kernel, channel, layer.
+    # layer makes each parameter-owning module indivisible and attaches a
+    # following BN to the previous layer. Layer scores use trainable parameters
+    # only; configured BN running stats can still travel in the selected payload.
+    # For layer, omit channel_size, bias, refinement, and method.grouping.
+    unit: kernel
+    # 0 leaves channel blocks unsplit; positive N caps an input-channel chunk.
+    channel_size: 0
+    # repeat_per_chunk, separate, local_only. Used for kernel/channel units.
+    bias: separate
+    # Optional feature: remove this mapping or set refinement: null to disable.
+    # The resulting primitive-block layout is compiled once per experiment;
+    # refined blocks are processed as packed tensors rather than rebuilt each round.
+    refinement:
+      # Supported targets: linear, pointwise.
+      targets: [linear, pointwise]
+      linear_chunk_size: 8
+      pointwise_chunk_size: 8
+
+  # Optional and independent feature. Remove this mapping or set grouping: null
+  # to pass primitive units directly to segment construction.
+  grouping:
+    # Groups are layer-local and ordered only by criterion below.
+    strategy: within_layer_by_criterion
+    # sensitivity_aligned groups adjacent sorted sensitivities;
+    # sensitivity_diverse alternates the lowest and highest sensitivities.
+    arrangement: sensitivity_aligned
+    size: 3
+    criterion:
+      # This metric controls group membership only. It does not replace the
+      # continuous segment_importance metric.
+      # Gradient round/cross-round lifetimes use independent buffers, so this
+      # choice may differ from a gradient metric under segment_importance.
+      metric: gradient_magnitude.round_step_ema
+      # Reduction from per-parameter values to one primitive-unit criterion.
+      # Supported: mean_abs, l2, rms.
+      parameter_to_unit: l2
+
+  # One semantically continuous importance value flows from primitive units to
+  # groups to segments. It is never replaced at an intermediate stage.
+  segment_importance:
+    # Temporal lifetime is part of the metric name; there are no public reset or
+    # EMA-scope switches. See README for the complete metric list.
+    metric: fisher_taylor_current.cross_round_step_ema
+    reductions:
+      # Per-parameter values -> primitive unit: mean_abs, l2, rms.
+      parameter_to_unit: l2
+      # Primitive units -> group and groups -> segment: mean, sum, max, l2, rms.
+      unit_to_group: l2
+      group_to_segment: l2
+
+  segments:
+    count: 5
+    # fixed, reshuffle_once, reshuffle_each_round,
+    # importance_balanced_by_payload.
+    construction: importance_balanced_by_payload
+    selection:
+      # random_uniform or importance_weighted.
+      strategy: importance_weighted
+      # Applies base**p and normalizes again after deriving importance probabilities.
+      exponential_normalization: true
+      # Must be greater than 1. Larger values concentrate more probability on
+      # high-importance segments. Defaults to e when omitted.
+      exponential_base: 10.0
+
+  exchange:
+    # Gist/DFA/SDFA use sends_per_client. SegmentPulling instead uses
+    # pulls_per_segment and must not specify sends_per_client.
+    sends_per_client: 10
+    # SegmentPulling alternative; replace sends_per_client with this field:
+    # pulls_per_segment: 2
+    recipient_selection:
+      # random_with_replacement, random_without_replacement,
+      # balanced_probabilistic, balanced_unique_probabilistic
+      # balanced_round_robin. balanced_unique_probabilistic avoids selecting
+      # the same recipient again for one sender/segment until all candidates
+      # have been used once, then starts a new candidate cycle.
+      strategy: balanced_unique_probabilistic
+      # Used by both probabilistic balancing strategies.
+      balance_strength: 5.0
+    # Used by the sender-push family; aggregation begins at the threshold.
+    receive_queue:
+      aggregation_threshold: 1
+      capacity: 50
+
+  # Optional post-local-training bound for each primitive unit's update.
+  # This is independent of the post-aggregation unit_l2 constraint below.
+  local_update:
+    unit_l2:
+      # none leaves local training unchanged; bounded clips only updates whose
+      # L2 norm exceeds multiplier * the unit's pre-training parameter L2 norm.
+      mode: none
+      # Required only for bounded. Must be finite and greater than 0; values
+      # below 1 are valid. For example, 0.1 caps ||delta|| at 0.1 * ||w_pre||.
+      # multiplier: 0.1
+  aggregation:
+    # Optional bound on the update caused by aggregation. It compares the raw
+    # aggregate with this receiver's parameters immediately before aggregation.
+    update_unit_l2:
+      # none leaves the aggregation update unchanged; bounded only shrinks
+      # updates exceeding multiplier * the pre-aggregation unit L2 norm.
+      mode: none
+      # Required only for bounded and must be greater than 0. For equal-norm
+      # parameters, 2.0 permits a complete direction reversal.
+      # This multiplier is independent of unit_l2. When both are enabled, the
+      # framework rechecks both constraints and resolves projection conflicts
+      # per primitive unit without changing either configured multiplier.
+      # multiplier: 2.0
+
+    # Optional post-aggregation L2 constraint for each primitive
+    # kernel/channel/layer unit. Only trainable, non-bias values participate;
+    # bias, frozen parameters, and buffers keep their raw aggregation result.
+    unit_l2:
+      # none leaves the raw aggregate unchanged; exact restores the receiver's
+      # pre-aggregation norm; bounded permits a multiplicative norm interval.
+      mode: none
+      # Required only for bounded. A value m >= 1 permits norms in
+      # [reference / m, reference * m]. For example, 1.2 gives
+      # [0.833 * reference, 1.2 * reference].
+      # multiplier: 1.2
+    weight:
+      # Reprocess the actual contributor weights for each parameter/unit using
+      # base**normalized_weight followed by renormalization. false preserves
+      # the original weighted-average behavior.
+      exponential_normalization: false
+      # Must be greater than 1. Larger values favor the largest contributor
+      # weight more strongly. This is independent of segment-selection base.
+      exponential_base: 10.0
+      # Separate from grouping criterion and segment importance.
+      # uniform, validation_accuracy,
+      # fisher_diagonal.{round_step_ema,cross_round_step_ema},
+      # gradient_magnitude.{round_step_ema,cross_round_step_ema}, or
+      # fisher_lipschitz_interaction temporal variants documented in README.
+      # Centralized validation_accuracy accepts one scalar per model; Fisher
+      # weights must exactly match the aggregated parameter-vector length.
+      # Non-finite parameters, BN state, weights, and results are rejected.
+      metric: validation_accuracy
+      # Only has an effect for validation_accuracy and defaults to true for that
+      # metric. It does not refresh BN while validation weights are calculated.
+      # After aggregation, true recalibrates the active model from validation
+      # data immediately before test-set evaluation; false keeps current stats.
+      # Other metrics accept this field but normalize it to false without
+      # accessing a validation loader. The run name records the state only for
+      # validation_accuracy.
+      refresh_batch_norm_from_validation: true
+      # parameter or block. These two fields affect only aggregation metrics
+      # that support Fisher-style weights. block always follows the actual
+      # method.partition.unit; there is no independent aggregation block unit.
+      granularity: block
+      block_reduction: mean
+      # none or device_layer_l2. device_layer_l2 is valid only for a
+      # fisher_diagonal metric with block granularity, matching kernel/channel
+      # units, and block_reduction: l2. It normalizes using every unit in the
+      # sender's complete layer before segment selection and communication.
+      normalization: none
+
+  # Optional estimators. The section is used only when its corresponding
+  # segment-importance metric is selected.
+  estimators:
+    hutchinson:
+      probe_vectors: 5
+      # 0 means all local-training batches.
+      batch_limit: 0
+
+# Optional differential privacy. null or omission disables the feature. The
+# supported modes are model_update and local_dp_sgd. Both accept only parameter-wise
+# partitioning, scope=all, validation_accuracy aggregation, trainable BN affine
+# parameters, and parameter_magnitude.current for importance construction.
+differential_privacy: null
+# differential_privacy:
+#   # model_update clips/noises one outgoing update per device and round.
+#   # local_dp_sgd clips/noises per-sample gradients at every local SGD step.
+#   mode: model_update
+#   # C: the whole update (model_update) or each per-sample gradient
+#   # (local_dp_sgd) is clipped to this model-wide L2 norm.
+#   clipping_norm: 1.0
+#   # sigma: model_update uses replace-one sensitivity 2C and noise std 2C*sigma;
+#   # local_dp_sgd uses add/remove sensitivity C and noise std C*sigma.
+#   noise_multiplier: 1.2
+#   # Target delta used when converting accumulated RDP to epsilon.
+#   delta: 1.0e-5
+#
+# local_dp_sgd reuses training.local.epochs_per_round,
+# training.local.max_batches_per_epoch, and dataset.batches.train_size. It sets
+# q=min(batch_size, local_dataset_size)/local_dataset_size and draws exactly
+# max_batches_per_epoch fresh Poisson batches per epoch, giving
+# epochs_per_round * max_batches_per_epoch private steps per active round.
+# It additionally requires optimizer.name=sgd, training.local.early_stop=null,
+# learning_rate_adaptation.strategies=[] and a
+# classification task. BN affine parameters remain trainable, while private
+# batches do not update running stats; the existing public-validation refresh
+# switch controls whether those stats are refreshed from validation data.
+# Fisher block-statistics metrics are incompatible with local_dp_sgd; disable
+# that probe or retain only mean_abs, rms, and lipschitz metrics.
+#
+# The resulting private model is reused
+# for validation_accuracy, segment construction/selection, BN affine payloads,
+# and all packets/recipients. RDP orders are fixed in source code. Accounting is
+# written to privacy_accounting.csv; update norms and DP RNG seeds are not logged.
+# The CSV retains every rdp_alpha_* value and also records optimal_alpha, the
+# candidate order producing the smallest reported epsilon.
+# Preview privacy cost or solve sigma for a target epsilon before training:
+# python -m src.tools.privacy_cost_estimator --config-file PATH.yml
+# python -m src.tools.privacy_cost_estimator --config-file PATH.yml --target-epsilon 8 --delta 1e-5
+# The default assumes every device participates in all federation.rounds;
+# pass --participations N when one device's active-round count is known.
+# experiment.repeat_count runs are not composed by this estimator.
+# Select C from a non-private CSV whose l2_norm rows are whole-model update
+# norms (model_update) or per-sample whole-model gradient norms (local_dp_sgd):
+# python -m src.tools.clipping_norm_selector --config-file PATH.yml --norm-file calibration_norms.csv
+
+
+# Optional importance-metric experiment. The current example uses a non-parameter
+# partition, so the probe is disabled. Set method.partition.unit to parameter and
+# replace null with the commented mapping below to enable it.
+probes:
+  importance_correlation: null
+  # importance_correlation:
+  #   # Choose when the reference scores and measurements are calculated.
+  #   # Supported: after_training, after_aggregation.
+  #   stage: after_training
+  #   # "method" resolves to method.segment_importance.metric. An explicit
+  #   # canonical parameter-level importance metric is also accepted.
+  #   comparison_baseline: method
+  #   # Use "all" or a list of 1-based federation rounds.
+  #   evaluation_rounds: all
+  #   # Each reference score can be enabled independently.
+  #   reference_scores:
+  #     gradient_magnitude.round_sample_mean: true
+  #     gradient_weight_magnitude.round_sample_mean: true
+  #     empirical_fisher_diagonal.round_sample_mean: true
+  #     empirical_fisher_weighted.round_sample_mean: true
+  #     hutchinson_diagonal.round_estimate: true
+  #     hutchinson_weighted.round_estimate: true
+  #   measurements:
+  #     spearman: true
+  #     top_k_overlap: true
+  #     top_k_jaccard: true
+  #     top_k: [0.05, 0.1, 0.2, 0.3]
+  #     # Output columns encode the fraction, for example top_k_overlap_0.1.
+  #   hutchinson:
+  #     probe_vectors: 5
+  #     batch_limit: 0  # 0 evaluates all local-train batches.
+
+output:
+  # metrics.xlsx is checkpointed every 10 rounds and at the final round.
+  # Pre-aggregation validation and post-aggregation test sheets are named
+  # validation_*_pre_agg and test_*_post_agg, respectively.
+  # communication_packets.csv is always generated. Numeric payloads are
+  # counted as float32; bitmap storage is ceil(bitmap_bits / 8) bytes. Dropped
+  # attempts remain in the ledger and count toward sender communication cost.
+  # Push and pull use the same delivery, BN retry, and payload accounting rules.
+  # Linux filesystems usually cap one path component at 255 bytes.
+  # Long run-directory names are shortened once at underscore-delimited field
+  # boundaries. The suffix receives more space so sweep labels such as
+  # local_l2_0_05, agg_update_l2_0_71, eps20, and eps0_5 remain readable.
+  # The trailing hash includes the source config filename, parallel run label,
+  # and complete canonical YAML content. This separates differently named files
+  # and same-seed repeats even when readable name fields are shortened away.
+  max_run_directory_name_length: 96  # UTF-8 byte limit; runtime also enforces a Windows-safe maximum of 96.

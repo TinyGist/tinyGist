@@ -1,0 +1,97 @@
+schema_version: 2
+experiment:
+  task: classification
+  repeat_count: 1
+  seed: 42
+federation:
+  rounds: 200
+  clients:
+    count: 10
+    availability:
+      strategy: probabilistic
+      distribution: gaussian
+      gaussian_mean: 0.8
+      gaussian_std: 0.1
+      chi_square_k: 2
+      uniform_multiplier: 2
+      minimum: 1.0
+      maximum: 1.0
+  network:
+    topology: mesh_full
+    reshuffle_each_round: false
+    reliability:
+      mean: 0.8
+      std: 0.1
+      minimum: 1.0
+      maximum: 1.0
+dataset:
+  name: mnist
+  partition:
+    samples_per_client: 610
+    labels_per_client: 3
+    label_assignment:
+      strategy: loop
+      loop_step: 3
+    sample_assignment:
+      strategy: dirichlet
+      dirichlet_alpha: 100
+  evaluation:
+    test_samples: 2010
+    validation_samples: 2010
+  batches:
+    train_size: 50
+    test_size: 100
+    validation_size: 100
+model:
+  name: FCN
+  input_size: 784
+  num_classes: 10
+training:
+  optimizer:
+    name: adam_cross_round
+    learning_rate: 0.01
+    weight_decay: 0.0
+  local:
+    epochs_per_round: 3
+    max_batches_per_epoch: 3
+  loss: cross_entropy
+method:
+  name: Gist
+  parameters:
+    scope: all
+    batch_norm:
+      include: affine
+      distribution: as_base_unit
+      aggregation_weight: same_as_model
+  partition:
+    unit: parameter
+  segment_importance:
+    metric: hutchinson_weighted.round_estimate
+    reductions:
+      parameter_to_unit: mean_abs
+      unit_to_group: mean
+      group_to_segment: mean
+  segments:
+    count: 3
+    construction: importance_balanced_by_payload
+    selection:
+      strategy: importance_weighted
+      exponential_normalization: false
+  exchange:
+    sends_per_client: 6
+    recipient_selection:
+      strategy: balanced_probabilistic
+      balance_strength: 0.0
+    receive_queue:
+      aggregation_threshold: 5
+      capacity: 50
+  aggregation:
+    unit_l2:
+      mode: none
+    weight:
+      metric: validation_accuracy
+      refresh_batch_norm_from_validation: true
+  estimators:
+    hutchinson:
+      probe_vectors: 10
+      batch_limit: 0

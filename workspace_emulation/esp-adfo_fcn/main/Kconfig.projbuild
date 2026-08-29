@@ -1,0 +1,7 @@
+menu "Example Configuration"
+    config ETH_USE_OPENETH
+        bool "Use Openeth"
+            default y
+            help
+                Config to use Openeth.
+endmenu

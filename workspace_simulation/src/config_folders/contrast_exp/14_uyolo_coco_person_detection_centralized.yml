@@ -1,0 +1,47 @@
+schema_version: 2
+
+experiment:
+  task: object_detection
+  seed: 42
+
+federation:
+  rounds: 200
+  clients:
+    count: 10
+
+dataset:
+  name: yolo_person
+  partition:
+    samples_per_client: 10000
+    labels_per_client: 1
+    label_assignment:
+      strategy: loop
+      loop_step: 3
+    sample_assignment:
+      strategy: dirichlet
+      dirichlet_alpha: 100
+  evaluation:
+    test_samples: 2010
+    validation_samples: 1010
+  batches:
+    train_size: 300
+    test_size: 100
+    validation_size: 100
+
+model:
+  name: uYOLO
+  input_size: 3
+  num_classes: 1
+
+training:
+  optimizer:
+    name: adam_cross_round
+    learning_rate: 0.005
+    weight_decay: 0
+  local:
+    epochs_per_round: 3
+    max_batches_per_epoch: 3
+  loss: yolo_person_loss
+
+method:
+  name: Centralized
