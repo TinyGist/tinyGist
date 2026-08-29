@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="branding/tinygist-logo.svg" alt="tinyGist logo" width="760">
+  <img src="branding/logo.png" alt="tinyGist logo" width="760">
 </p>
 
 # TinyGist
