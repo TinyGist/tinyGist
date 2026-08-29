@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="branding/tinygist-logo.svg" alt="tinyGist logo" width="760">
+</p>
+
 # TinyGist
 
 This repository contains the simulation, ESP32/QEMU emulation, and physical-device workflows used by the TinyGist paper. It also contains the configuration suites and a lightweight notebook for inspecting the raw results produced by those workflows.
