@@ -1,0 +1,6 @@
+Dockerfile text eol=lf
+*.sh text eol=lf
+*.sha256 text eol=lf
+sdkconfig text eol=lf
+dependencies.lock text eol=lf
+sdkconfig.defaults.* text eol=lf
