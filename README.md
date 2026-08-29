@@ -20,6 +20,12 @@ cd tinyGist
 docker build -t tinygist-artifact-mobicom26:latest -f Dockerfile .
 ```
 
+[Optional] Alternatively, you can use the prebuilt image from Github Container Registry:
+
+```bash
+docker pull ghcr.io/tinygist/tinygist-artifact-mobicom26:latest
+```
+
 The image contains four workspaces:
 
 - `/usr/sim`: the simulation framework and a default CPU-only PyTorch environment;
@@ -39,12 +45,6 @@ python -c "import torch; print(torch.__version__, torch.version.cuda)"
 ```
 
 The supplied image installs CPU-only PyTorch. The Dockerfile retains a commented CUDA installation command for users who build a CUDA-enabled variant.
-
-[Optional] Alternatively, you can use the prebuilt image from Github Container Registry:
-
-```bash
-docker pull ghcr.io/tinygist/tinygist-artifact-mobicom26:latest
-```
 
 ## 3. Simulation quick start
 
