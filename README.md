@@ -2,9 +2,43 @@
   <img src="branding/logo.png" alt="tinyGist logo" width="760">
 </p>
 
+<p align="center">
+  <a href="https://tinygist.github.io"><img src="https://img.shields.io/badge/Project%20Page-tinygist.github.io-870074" alt="Project page"></a>
+  <a href="https://doi.org/10.1145/3795866.3844490"><img src="https://img.shields.io/badge/Paper-ACM%20MobiCom%202026-870074" alt="Paper"></a>
+  <a href="https://tinygist.github.io/#video"><img src="https://img.shields.io/badge/Teaser-90%20s-870074" alt="Teaser video"></a>
+  <br>
+  <img src="https://img.shields.io/badge/ACM-Artifacts%20Available-1C39BB" alt="ACM Artifacts Available">
+  <img src="https://img.shields.io/badge/ACM-Artifacts%20Evaluated-00A693" alt="ACM Artifacts Evaluated">
+  <img src="https://img.shields.io/badge/ACM-Results%20Reproduced-CA910D" alt="ACM Results Reproduced">
+</p>
+
 # TinyGist
 
+> **Adaptive Segmented Decentralized Federated Learning on Tiny Devices**<br>
+> Navidreza Asadi, Lars Wulfert, Chi Xia, Halil Ibrahim Bengü, Hendrik Wöhrle, Wolfgang Kellerer<br>
+> ACM MobiCom 2026 | [Project page, teaser, and interactive demo](https://tinygist.github.io)
+
 This repository contains the simulation, ESP32/QEMU emulation, and physical-device workflows used by the TinyGist paper. It also contains the configuration suites and a lightweight notebook for inspecting the raw results produced by those workflows.
+
+## Citation
+
+If you use TinyGist in your research, please cite:
+
+```bibtex
+@inproceedings{asadi2026tinygist,
+  author    = {Asadi, Navidreza and Wulfert, Lars and Xia, Chi and Beng{\"u}, Halil Ibrahim and W{\"o}hrle, Hendrik and Kellerer, Wolfgang},
+  title     = {Adaptive Segmented Decentralized Federated Learning on Tiny Devices},
+  booktitle = {Proceedings of the 32nd Annual International Conference on Mobile Computing and Networking},
+  series    = {MobiCom '26},
+  year      = {2026},
+  month     = oct,
+  location  = {Austin, TX, USA},
+  publisher = {Association for Computing Machinery},
+  address   = {New York, NY, USA},
+  isbn      = {9798400725050},
+  doi       = {10.1145/3795866.3844490}
+}
+```
 
 ## 1. Requirements
 
