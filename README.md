@@ -38,6 +38,31 @@ If you use TinyGist in your research, please cite:
   isbn      = {9798400725050},
   doi       = {10.1145/3795866.3844490}
 }
+
+@inproceedings{asadi2025gist,
+  author    = {Asadi, Navidreza and Beng{\"u}, Halil Ibrahim and Wulfert, Lars and W{\"o}hrle, Hendrik and Kellerer, Wolfgang},
+  title     = {{Gist} - Optimizing Segmentation for Decentralized Federated Learning on Tiny Devices},
+  booktitle = {Proceedings of the Federated Learning and Edge AI for Privacy and Mobility},
+  series    = {FLEdge-AI '25},
+  year      = {2025},
+  pages     = {77--84},
+  publisher = {Association for Computing Machinery},
+  address   = {New York, NY, USA},
+  isbn      = {9798400719769},
+  doi       = {10.1145/3737899.3768527}
+}
+
+@inproceedings{asadi2025zwe3,
+  author    = {Asadi, Navidreza and Beng{\"u}, Halil Ibrahim and Wulfert, Lars and W{\"o}hrle, Hendrik and Kellerer, Wolfgang},
+  title     = {Road to Tiny Reality: Digital Twins for Decentralized {AI} on Microcontrollers},
+  booktitle = {Proceedings of the 31st Annual International Conference on Mobile Computing and Networking},
+  series    = {MobiCom '25},
+  year      = {2025},
+  pages     = {1305--1307},
+  publisher = {Association for Computing Machinery},
+  address   = {New York, NY, USA},
+  doi       = {10.1145/3680207.3765668}
+}
 ```
 
 ## 1. Requirements
